@@ -1,0 +1,68 @@
+﻿<Window x:Class="TranscriptReader.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TranscriptReader"
+        mc:Ignorable="d"
+        Title="Transcript Reader" Height="450" Width="500"
+        Foreground="WhiteSmoke" FontFamily="Roboto" Icon="/notepadIcon.ico">
+    <Window.Resources>
+        <ResourceDictionary>
+            <local:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+            <local:AddBufferToWidthConverter x:Key="AddBufferToWidthConverter" />
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Background="Black">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Vertical">
+            <TextBlock Text="Transcript Input" Margin="5"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="50"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding Path}" IsEnabled="False" Grid.Column="0" Margin="0,0,5,0"
+                         VerticalContentAlignment="Center"/>
+                <Button Content="Browse" Padding="5" FontSize="10" Grid.Column="1" Click="Submit_Click"/>
+            </Grid>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Vertical" Visibility="{Binding Users.Count, Converter={StaticResource IntToVisibilityConverter}}">
+            <TextBlock Text="Filter Input" Margin="5"/>
+            <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"/>
+        </StackPanel>
+        <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0,0,0,0"
+                 ItemsSource="{Binding FilteredMessages}" SelectedItem="{Binding SelectedMessage}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border CornerRadius="15" Background="DodgerBlue" Margin="1" Padding="5,4,15,4">
+                        <Grid MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}, Converter={StaticResource AddBufferToWidthConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid Background="Transparent" Grid.Column="0" Width="37" Height="37" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,5,0"
+                                  ToolTip="{Binding User.Name}">
+                                <Ellipse Fill="{Binding User.Colour}" Margin="3"/>
+                                <TextBlock Text="{Binding User.Initials}" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="0,1,1,0"
+                                           FontWeight="Bold" Foreground="WhiteSmoke"/>
+                            </Grid>
+                            <Grid Grid.Column="1" >
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Time}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
+                                <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="480"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</Window>
