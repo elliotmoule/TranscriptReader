@@ -25,7 +25,7 @@ namespace TranscriptReader
         {
             InitializeComponent();
             DataContext = this;
-
+            IsFormEnabled = true;
         }
 
         private void Submit_Click(object sender, RoutedEventArgs e)
@@ -33,29 +33,32 @@ namespace TranscriptReader
             OpenFileDialog fileDialog = new()
             {
                 Multiselect = false,
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
                 Filter = FileFilterX.Library.FileFilterX.FilterBuilder(false, new FileFilterX.Library.Filter("Text Files", new string[] { "TXT", "txt" })),
                 Title = "Select Transcript.."
             };
 
             fileDialog.ShowDialog();
 
-            Path = fileDialog.FileName;
+            FilePath = fileDialog.FileName;
 
-            SortTranscript(Path);
+            SortTranscript(FilePath);
         }
 
         private void SortTranscript(string filepath)
         {
             if (string.IsNullOrEmpty(filepath)) return;
             if (!File.Exists(filepath)) return;
+            IsFormEnabled = false;
 
             UserMessages.Clear();
+            _allUsers.Clear();
             Users.Clear();
 
             var transcript = File.ReadAllLines(filepath);
+            UserMessage last = null;
 
-            Regex regex = new("[0-9]+:[0-9]+:[0-9]+\\.[0-9]+\\s-->\\s(([+-]?(?=\\.\\d|\\d)(?:\\d+)?(?:\\.?\\d*))(?:[Ee]([+-]?\\d+))?(:([+-]?(?=\\.\\d|\\d)(?:\\d+)?(?:\\.?\\d*))(?:[Ee]([+-]?\\d+))?)+) ");
+            Regex regex = new("[0-9]+:[0-9]+:[0-9]+\\.[0-9]+\\s+-->\\s+[0-9]+:[0-9]+:[0-9]+\\.[0-9]+");
             for (int i = 0; i < transcript.Length; i++)
             {
                 var maxLoop = 10000;
@@ -99,19 +102,34 @@ namespace TranscriptReader
                     maxLoop--;
                 }
 
-                var newUser = _allUsers.FirstOrDefault(x => x.Name == name);
-                if (newUser == null)
+                if (FilterSpeechFillers && IsFillerWord(message, 2))
                 {
-                    newUser = new User(name);
-                    _allUsers.Add(newUser);
+                    continue;
                 }
 
-                UserMessages.Add(new()
+                var speaker = _allUsers.FirstOrDefault(x => x.Name == name);
+                if (speaker == null)
+                {
+                    speaker = new User(name);
+                    _allUsers.Add(speaker);
+                }
+
+                UserMessage newMessage = new()
                 {
                     Time = time,
                     Message = message,
-                    User = newUser,
-                });
+                    User = speaker,
+                };
+
+                if (UserMessages.Count > 0 && last.User.Id == speaker.Id)
+                {
+                    last.Message += $"{Environment.NewLine + Environment.NewLine}{message}";
+                }
+                else
+                {
+                    UserMessages.Add(newMessage);
+                    last = newMessage;
+                }
             }
 
             Task.Factory.StartNew(() =>
@@ -133,7 +151,7 @@ namespace TranscriptReader
                     var iteration = 0;
                     for (int i = 0; i < _allUsers.Count; i++)
                     {
-                        if(ColourDictionary.LuminosityList.Count <= iteration)
+                        if (ColourDictionary.LuminosityList.Count <= iteration)
                         {
                             iteration = 0;
                         }
@@ -144,10 +162,13 @@ namespace TranscriptReader
                 });
             });
 
-            Users = new ObservableCollection<string>(_allUsers.Select(x => x.Name).OrderBy(y => y));
+            Users.AddRange(_allUsers.Select(x => x.Name).OrderBy(y => y));
             Users.Insert(0, "< None >");
             SelectedUser = Users[0];
             NotifyChanged(nameof(UserMessages));
+            NotifyChanged(nameof(Users));
+
+            IsFormEnabled = true;
         }
 
         private static Random _random = new();
@@ -164,14 +185,23 @@ namespace TranscriptReader
             }
         }
 
+        private static bool IsFillerWord(string input, int tolerance)
+        {
+            string[] words = input.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            int fillerWordCount = words.Length;
+
+            return fillerWordCount <= tolerance;
+        }
+
         private string _path = string.Empty;
-        public string Path
+        public string FilePath
         {
             get { return _path; }
             set
             {
                 _path = value;
-                NotifyChanged(nameof(Path));
+                NotifyChanged(nameof(FilePath));
             }
         }
 
@@ -186,7 +216,7 @@ namespace TranscriptReader
             }
         }
 
-        private ObservableCollection<UserMessage> _filteredMessages;
+        private ObservableCollection<UserMessage> _filteredMessages = new();
         public ObservableCollection<UserMessage> FilteredMessages
         {
             get { return _filteredMessages; }
@@ -232,12 +262,62 @@ namespace TranscriptReader
 
                 if (value == null || value.Contains("None"))
                 {
-                    FilteredMessages = new ObservableCollection<UserMessage>(UserMessages);
+                    FilteredMessages.Clear();
+                    FilteredMessages.AddRange(UserMessages);
                 }
                 else
                 {
-                    FilteredMessages = new ObservableCollection<UserMessage>(UserMessages.Where(x => x.User.Name == value));
+                    FilteredMessages.Clear();
+                    FilteredMessages.AddRange(UserMessages.Where(x => x.User.Name == value));
                 }
+                SelectedMessage = FilteredMessages.FirstOrDefault();
+            }
+        }
+
+        private string _messageFilter = string.Empty;
+        public string MessageFilter
+        {
+            get { return _messageFilter; }
+            set
+            {
+                _messageFilter = value;
+                NotifyChanged(nameof(MessageFilter));
+
+                if (string.IsNullOrWhiteSpace(value) || value.Length < 3)
+                {
+                    FilteredMessages.Clear();
+                    FilteredMessages.AddRange(UserMessages);
+                }
+                else
+                {
+                    FilteredMessages.Clear();
+                    FilteredMessages.AddRange(UserMessages.Where(x => x.Message.Contains(value, StringComparison.OrdinalIgnoreCase)));
+                }
+                SelectedMessage = FilteredMessages.FirstOrDefault();
+            }
+        }
+
+        private bool _filterSpeechFillers = false;
+        public bool FilterSpeechFillers
+        {
+            get { return _filterSpeechFillers; }
+            set
+            {
+                _filterSpeechFillers = value;
+                NotifyChanged(nameof(FilterSpeechFillers));
+
+                SortTranscript(FilePath);
+            }
+        }
+
+        private bool _isFormEnabled = false;
+        public bool IsFormEnabled
+        {
+            get { return _isFormEnabled; }
+            set
+            {
+                _isFormEnabled = value;
+                NotifyChanged(nameof(IsFormEnabled));
             }
         }
     }

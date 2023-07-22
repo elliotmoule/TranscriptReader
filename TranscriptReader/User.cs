@@ -32,6 +32,7 @@ namespace TranscriptReader
 
             _name = name;
             _initials = _initials.Trim();
+            Id = Guid.NewGuid();
         }
 
         private readonly string _name = string.Empty;
@@ -54,6 +55,17 @@ namespace TranscriptReader
             {
                 _colour = value;
                 NotifyChanged(nameof(Colour));
+            }
+        }
+
+        private Guid _id;
+        public Guid Id
+        {
+            get { return _id; }
+            set
+            {
+                _id = value;
+                NotifyChanged(nameof(Id));
             }
         }
     }

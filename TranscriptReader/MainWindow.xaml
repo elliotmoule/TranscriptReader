@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TranscriptReader"
         mc:Ignorable="d"
-        Title="Transcript Reader" Height="450" Width="500"
+        Title="Transcript Reader" Height="450" Width="500" IsEnabled="{Binding IsFormEnabled}"
         Foreground="WhiteSmoke" FontFamily="Roboto" Icon="/notepadIcon.ico">
     <Window.Resources>
         <ResourceDictionary>
@@ -32,8 +32,37 @@
             </Grid>
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Vertical" Visibility="{Binding Users.Count, Converter={StaticResource IntToVisibilityConverter}}">
-            <TextBlock Text="Filter Input" Margin="5"/>
-            <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"/>
+            <TextBlock Text="Filter Input" Margin="5" FontWeight="Bold" FontSize="16"/>
+            <Border>
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="By Speaker:" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"/>
+                </Grid>
+            </Border>
+            <Border>
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="By Message:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Text="{Binding MessageFilter, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </Border>
+            <Border>
+                <Border.Background>
+                    <SolidColorBrush Color="White" Opacity="0.3"/>
+                </Border.Background>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <TextBlock Text="Options:" Margin="0,0,7,0"/>
+                    <CheckBox IsChecked="{Binding FilterSpeechFillers}" Foreground="WhiteSmoke" VerticalContentAlignment="Center"
+                          Content="Filter Speech Fillers" ToolTip="Includes one to two word expressions, rather than sentences, or fillers like 'ah, 'um'."/>
+                </StackPanel>
+            </Border>
         </StackPanel>
         <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0,0,0,0"
                  ItemsSource="{Binding FilteredMessages}" SelectedItem="{Binding SelectedMessage}">
@@ -55,9 +84,11 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition />
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Text="{Binding Time}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
                                 <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="480"/>
+                                <TextBlock Grid.Row="2" Text="{Binding User.Name}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
                             </Grid>
                         </Grid>
                     </Border>
