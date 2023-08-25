@@ -3,97 +3,112 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:TranscriptReader.Converters"
+        xmlns:gif="http://wpfanimatedgif.codeplex.com"
         xmlns:local="clr-namespace:TranscriptReader"
         mc:Ignorable="d"
         Title="Transcript Reader" Height="450" Width="500" IsEnabled="{Binding IsFormEnabled}"
         Foreground="WhiteSmoke" FontFamily="Roboto" Icon="/notepadIcon.ico">
     <Window.Resources>
         <ResourceDictionary>
-            <local:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
-            <local:AddBufferToWidthConverter x:Key="AddBufferToWidthConverter" />
+            <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+            <converters:AddBufferToWidthConverter x:Key="AddBufferToWidthConverter" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Background="Black">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition />
-        </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Orientation="Vertical">
-            <TextBlock Text="Transcript Input" Margin="5"/>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                    <ColumnDefinition Width="50"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Text="{Binding Path}" IsEnabled="False" Grid.Column="0" Margin="0,0,5,0"
+    <Grid>
+        <Grid Background="Black">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Vertical">
+                <TextBlock Text="Transcript Input" Margin="5"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="70"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding Path}" IsEnabled="False" Grid.Column="0" Margin="0,0,5,0"
                          VerticalContentAlignment="Center"/>
-                <Button Content="Browse" Padding="5" FontSize="10" Grid.Column="1" Click="Submit_Click"/>
-            </Grid>
-        </StackPanel>
-        <StackPanel Grid.Row="1" Orientation="Vertical" Visibility="{Binding Users.Count, Converter={StaticResource IntToVisibilityConverter}}">
-            <TextBlock Text="Filter Input" Margin="5" FontWeight="Bold" FontSize="16"/>
-            <Border>
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="By Speaker:" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"/>
+                    <Button Content="Browse" Padding="5" FontSize="10" Grid.Column="1" Click="Submit_Click"/>
+                    <ComboBox Grid.Column="2" Margin="4,0,0,0" ItemsSource="{Binding TranscriptTypes}"
+                          SelectedItem="{Binding SelectedTranscriptType}" DisplayMemberPath="Name"
+                          VerticalContentAlignment="Center"/>
                 </Grid>
-            </Border>
-            <Border>
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="By Message:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding MessageFilter, UpdateSourceTrigger=PropertyChanged}"/>
-                </Grid>
-            </Border>
-            <Border>
-                <Border.Background>
-                    <SolidColorBrush Color="White" Opacity="0.3"/>
-                </Border.Background>
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <TextBlock Text="Options:" Margin="0,0,7,0"/>
-                    <CheckBox IsChecked="{Binding FilterSpeechFillers}" Foreground="WhiteSmoke" VerticalContentAlignment="Center"
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Vertical" Visibility="{Binding Users.Count, Converter={StaticResource IntToVisibilityConverter}}">
+                <TextBlock Text="Filter Input" Margin="5" FontWeight="Bold" FontSize="16"/>
+                <Border>
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="By Speaker:" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"/>
+                    </Grid>
+                </Border>
+                <Border>
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="By Message:" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding MessageFilter, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </Border>
+                <Border>
+                    <Border.Background>
+                        <SolidColorBrush Color="White" Opacity="0.3"/>
+                    </Border.Background>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <TextBlock Text="Options:" Margin="0,0,7,0"/>
+                        <CheckBox IsChecked="{Binding FilterSpeechFillers}" Foreground="WhiteSmoke" VerticalContentAlignment="Center"
                           Content="Filter Speech Fillers" ToolTip="Includes one to two word expressions, rather than sentences, or fillers like 'ah, 'um'."/>
-                </StackPanel>
-            </Border>
-        </StackPanel>
-        <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0,0,0,0"
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0,0,0,0"
                  ItemsSource="{Binding FilteredMessages}" SelectedItem="{Binding SelectedMessage}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Border CornerRadius="15" Background="DodgerBlue" Margin="1" Padding="5,4,15,4">
-                        <Grid MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}, Converter={StaticResource AddBufferToWidthConverter}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition />
-                            </Grid.ColumnDefinitions>
-                            <Grid Background="Transparent" Grid.Column="0" Width="37" Height="37" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,5,0"
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="15" Background="DodgerBlue" Margin="1" Padding="5,4,15,4">
+                            <Grid MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}, Converter={StaticResource AddBufferToWidthConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Grid Background="Transparent" Grid.Column="0" Width="37" Height="37" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,5,0"
                                   ToolTip="{Binding User.Name}">
-                                <Ellipse Fill="{Binding User.Colour}" Margin="3"/>
-                                <TextBlock Text="{Binding User.Initials}" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="0,1,1,0"
+                                    <Ellipse Fill="{Binding User.Colour}" Margin="3"/>
+                                    <TextBlock Text="{Binding User.Initials}" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="0,1,1,0"
                                            FontWeight="Bold" Foreground="WhiteSmoke"/>
+                                </Grid>
+                                <Grid Grid.Column="1" >
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition />
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{Binding Time}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
+                                    <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="480"/>
+                                    <TextBlock Grid.Row="2" Text="{Binding User.Name}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
+                                </Grid>
                             </Grid>
-                            <Grid Grid.Column="1" >
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition />
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="{Binding Time}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
-                                <TextBlock Grid.Row="1" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="480"/>
-                                <TextBlock Grid.Row="2" Text="{Binding User.Name}" FontSize="8" HorizontalAlignment="Right" Margin="0"/>
-                            </Grid>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        <Border Visibility="{Binding IsFormEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}">
+            <Border.Background>
+                <SolidColorBrush Color="WhiteSmoke" Opacity="0.3"/>
+            </Border.Background>
+            <Image gif:ImageBehavior.AnimatedSource="Assets/spinner-blue.gif" Height="64"/>
+        </Border>
     </Grid>
 </Window>

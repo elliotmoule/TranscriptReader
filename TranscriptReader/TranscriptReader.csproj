@@ -4,10 +4,18 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UserSecretsId>9f1651f0-c525-46ca-bf73-bacd213f9a72</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Assets\Iphone-spinner-2.gif" />
+    <None Remove="Assets\spinner-blue.gif" />
     <None Remove="notepadIcon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
+    <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\Iphone-spinner-2.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\spinner-blue.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="notepadIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>

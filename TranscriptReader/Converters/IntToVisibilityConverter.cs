@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
-namespace TranscriptReader
+namespace TranscriptReader.Converters
 {
-    public class AddBufferToWidthConverter : IValueConverter
+    public class IntToVisibilityConverter : IValueConverter
     {
-        private readonly double _buffer = 70;
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var retVal = value is double d ? d - _buffer : value;
-            return retVal;
+            return value is int i && i > 1 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value is double d ? d + _buffer : value;
+            throw new NotImplementedException();
         }
     }
 }

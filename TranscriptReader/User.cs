@@ -21,6 +21,10 @@ namespace TranscriptReader
             {
                 _initials = string.Concat(names[0].AsSpan(0, 1), names[1].AsSpan(0, 1));
             }
+            else if(names.Length == 1 && names[0].Length > 1)
+            {
+                _initials = names[0].AsSpan(0,2).ToString();
+            }
             else if (names.Length == 1)
             {
                 _initials = string.Concat(names[0].AsSpan(0, 1), "?");

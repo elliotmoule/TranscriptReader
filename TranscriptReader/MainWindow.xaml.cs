@@ -10,6 +10,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using TranscriptReader.Models;
+using TranscriptReader.OpenAISummarizer;
 
 namespace TranscriptReader
 {
@@ -20,16 +22,30 @@ namespace TranscriptReader
     {
         public event PropertyChangedEventHandler PropertyChanged;
         public void NotifyChanged([CallerMemberName] string propertyName = "") => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        private List<string> _summarisedSentences = new();
+        private Summarizer _summarizer;
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
+            AddTranscriptTypes();
             IsFormEnabled = true;
+        }
+
+        private void AddTranscriptTypes()
+        {
+            foreach (var value in Enum.GetValues(typeof(TranscriptType)))
+            {
+                TranscriptTypes.Add(new TranscriptTypeComboItem(value));
+            }
+
+            SelectedTranscriptType = TranscriptTypes.FirstOrDefault();
         }
 
         private void Submit_Click(object sender, RoutedEventArgs e)
         {
+            IsFormEnabled = false;
             OpenFileDialog fileDialog = new()
             {
                 Multiselect = false,
@@ -40,97 +56,51 @@ namespace TranscriptReader
 
             fileDialog.ShowDialog();
 
-            FilePath = fileDialog.FileName;
-
-            SortTranscript(FilePath);
+            DoTranscription(fileDialog.FileName);
+            IsFormEnabled = true;
         }
 
-        private void SortTranscript(string filepath)
+        private void DoTranscription(string filePath)
         {
-            if (string.IsNullOrEmpty(filepath)) return;
-            if (!File.Exists(filepath)) return;
+            if (string.IsNullOrEmpty(filePath)) return;
+            if (!File.Exists(filePath)) return;
+
             IsFormEnabled = false;
+            if (FilePath != filePath)
+            {
+                // New document.
+                _summarisedSentences.Clear();
+                FilePath = filePath;
+            }
 
             UserMessages.Clear();
             _allUsers.Clear();
             Users.Clear();
 
-            var transcript = File.ReadAllLines(filepath);
-            UserMessage last = null;
+            _summarizer ??= new Summarizer();
 
-            Regex regex = new("[0-9]+:[0-9]+:[0-9]+\\.[0-9]+\\s+-->\\s+[0-9]+:[0-9]+:[0-9]+\\.[0-9]+");
-            for (int i = 0; i < transcript.Length; i++)
+            Task.Factory.StartNew(async () =>
             {
-                var maxLoop = 10000;
-                var time = string.Empty;
-
-                while (maxLoop > 0)
+                List<string> sentences = GetSentences(filePath).ToList();
+                if (sentences.Count > 0 && _summarisedSentences.Count == 0)
                 {
-                    time = transcript[i];
-                    if (regex.IsMatch(time))
-                    {
-                        break;
-                    }
-                    i++;
-                    maxLoop--;
+                    // Only sending for summarisation if there is a list of sentences.
+                    sentences = await _summarizer.SummarizeSentences(sentences);
+                    _summarisedSentences = sentences;
                 }
 
-                if (maxLoop <= 0)
+                var transcription = TranscriptionParser.Parse(sentences, SelectedTranscriptType.Type);
+                App.Current.Dispatcher.Invoke(() =>
                 {
-                    throw new Exception("Failed to get time!");
-                }
+                    SortTranscript(transcription);
+                });
+            });
+        }
 
-                i++;
-                var name = transcript[i];
-
-                i++;
-                var message = transcript[i];
-
-                maxLoop = 10000;
-                while (maxLoop > 0)
-                {
-                    i++;
-                    if (i < transcript.Length && !regex.IsMatch(transcript[i]))
-                    {
-                        message += $" {transcript[i]}";
-                    }
-                    else
-                    {
-                        i--;
-                        break;
-                    }
-                    maxLoop--;
-                }
-
-                if (FilterSpeechFillers && IsFillerWord(message, 2))
-                {
-                    continue;
-                }
-
-                var speaker = _allUsers.FirstOrDefault(x => x.Name == name);
-                if (speaker == null)
-                {
-                    speaker = new User(name);
-                    _allUsers.Add(speaker);
-                }
-
-                UserMessage newMessage = new()
-                {
-                    Time = time,
-                    Message = message,
-                    User = speaker,
-                };
-
-                if (UserMessages.Count > 0 && last.User.Id == speaker.Id)
-                {
-                    last.Message += $"{Environment.NewLine + Environment.NewLine}{message}";
-                }
-                else
-                {
-                    UserMessages.Add(newMessage);
-                    last = newMessage;
-                }
-            }
+        private void SortTranscript(Transcription transcription)
+        {
+            UserMessages.AddRange(transcription.Messages);
+            _allUsers.AddRange(transcription.Users);
 
             Task.Factory.StartNew(() =>
             {
@@ -171,7 +141,29 @@ namespace TranscriptReader
             IsFormEnabled = true;
         }
 
-        private static Random _random = new();
+        private List<string> GetSentences(string filepath)
+        {
+            var sentences = new List<string>();
+            if (string.IsNullOrWhiteSpace(filepath)) return sentences;
+            if (new FileInfo(filepath) is not FileInfo fi || !fi.Exists) return sentences;
+
+            var lines = File.ReadAllLines(filepath);
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)
+                    || line.Trim() is not string trimmed
+                    || IsFillerWord(trimmed, 2))
+                {
+                    continue;
+                }
+
+                sentences.Add(trimmed);
+            }
+
+            return sentences;
+        }
+
+        private static readonly Random _random = new();
         private static void Shuffle(List<SolidColorBrush> colors)
         {
             int n = colors.Count;
@@ -185,7 +177,7 @@ namespace TranscriptReader
             }
         }
 
-        private static bool IsFillerWord(string input, int tolerance)
+        internal static bool IsFillerWord(string input, int tolerance)
         {
             string[] words = input.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -306,7 +298,31 @@ namespace TranscriptReader
                 _filterSpeechFillers = value;
                 NotifyChanged(nameof(FilterSpeechFillers));
 
-                SortTranscript(FilePath);
+                DoTranscription(FilePath);
+            }
+        }
+
+        private TranscriptTypeComboItem _selectedTranscriptType = null;
+        public TranscriptTypeComboItem SelectedTranscriptType
+        {
+            get { return _selectedTranscriptType; }
+            set
+            {
+                _selectedTranscriptType = value;
+                NotifyChanged(nameof(SelectedTranscriptType));
+
+                DoTranscription(FilePath);
+            }
+        }
+
+        private ObservableCollection<TranscriptTypeComboItem> _transcriptTypes = new();
+        public ObservableCollection<TranscriptTypeComboItem> TranscriptTypes
+        {
+            get { return _transcriptTypes; }
+            set
+            {
+                _transcriptTypes = value;
+                NotifyChanged(nameof(TranscriptTypes));
             }
         }
 
